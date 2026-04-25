@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SFエンジ 工事日報</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:10px;font-family:"Yu Gothic","Meiryo",sans-serif;background:#e9ecef;color:#111}
+.topbar{position:sticky;top:0;z-index:10;background:#e9ecef;padding:8px 0;max-width:900px;margin:0 auto}
+.buttons{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px}
+button{border:0;border-radius:10px;padding:12px 10px;background:#111;color:#fff;font-size:15px;font-weight:bold}
+button.green{background:#0f5132}button.gray{background:#555}button.red{background:#8b0000}
+select,input,textarea{width:100%;font-family:inherit;font-size:16px;border:2px solid #333;border-radius:8px;padding:10px;background:#fffdf0}
+textarea{min-height:125px;line-height:1.55;resize:vertical}
+.page{max-width:900px;margin:0 auto;background:#fff;padding:14px;border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.15)}
+.header{border-bottom:4px solid #111;padding-bottom:8px;margin-bottom:10px}
+h1{margin:0;font-size:28px;letter-spacing:4px}.company{font-size:13px;line-height:1.5;margin-top:4px}.company-name{font-size:18px;font-weight:bold}
+.section{background:#111;color:#fff;font-weight:bold;padding:10px;margin-top:16px;border-radius:8px 8px 0 0}
+.guide{background:#fff3cd;border:2px solid #111;border-top:0;padding:9px;font-weight:bold;line-height:1.5}
+.grid{display:grid;grid-template-columns:105px 1fr;gap:0;border-top:1px solid #111;border-left:1px solid #111}
+.label,.field{border-right:1px solid #111;border-bottom:1px solid #111;padding:7px}
+.label{background:#f1f3f5;font-weight:bold;text-align:center;display:flex;align-items:center;justify-content:center}
+.status{font-size:12px;color:#333;min-height:18px}
+.shortcut,.quick-row{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.shortcut button,.quick-row button{font-size:13px;padding:10px;background:#374151}
+.count{font-size:12px;color:#555;text-align:right;margin-top:3px}
+.notice{background:#e7f5ff;border:2px solid #111;padding:8px;margin:8px 0;border-radius:8px;font-size:13px;line-height:1.5}
+.footer-note{font-size:12px;color:#333;margin-top:12px;line-height:1.5}
+.print-page{display:none}
+@media(min-width:760px){
+  .buttons{grid-template-columns:repeat(5,1fr)}
+  .header{display:flex;justify-content:space-between;align-items:flex-start}
+  .company{text-align:right}
+  .grid{grid-template-columns:140px 1fr 140px 1fr}
+  .shortcut{grid-template-columns:repeat(5,1fr)}
+  .quick-row{grid-template-columns:repeat(4,1fr)}
+}
+@media print{
+  @page{size:A4 portrait;margin:0}
+  body{background:#fff;padding:0}
+  .topbar,.page{display:none!important}
+  .print-page{display:block!important;width:210mm;min-height:297mm;margin:0;padding:9mm;background:#fff;color:#111;font-family:"Yu Gothic","Meiryo",sans-serif;overflow:hidden}
+  .p-header{display:flex;justify-content:space-between;border-bottom:4px solid #111;padding-bottom:6px;margin-bottom:7px}
+  .p-header h1{font-size:22px;margin:0;letter-spacing:5px}
+  .p-company{text-align:right;font-size:10px;line-height:1.4}.p-company-name{font-size:14px;font-weight:bold}
+  .p-table{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:5px}
+  .p-table th,.p-table td{border:1px solid #111;padding:4px;font-size:10.5px;vertical-align:top}
+  .p-table th{background:#f1f3f5;text-align:center;width:18%}
+  .p-section{background:#111;color:#fff;font-weight:bold;padding:4px 7px;margin-top:5px;font-size:11.5px}
+  .p-box{border:1px solid #111;min-height:30px;padding:5px;font-size:10.5px;line-height:1.32;white-space:pre-wrap}
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="buttons">
+    <button onclick="newReport()">＋新規</button>
+    <button class="gray" onclick="duplicateReport()">複製</button>
+    <button class="green" onclick="makePDF()">PDF作成</button>
+    <button class="gray" onclick="copyShareText()">共有文コピー</button>
+    <button class="red" onclick="deleteReport()">削除</button>
+  </div>
+  <select id="reportList" onchange="loadSelectedReport()"></select>
+  <div class="status" id="saveStatus">自動保存：待機中</div>
+</div>
+
+<main class="page">
+  <header class="header">
+    <div><h1>工事日報</h1><div>Daily Construction Report</div></div>
+    <div class="company"><div class="company-name">SFエンジ株式会社</div><div>築炉工事・耐火断熱工事・設備メンテナンス</div><div>作成日：<input data-key="createdDate" type="date" style="width:160px;display:inline-block"></div></div>
+  </header>
+
+  <div class="notice">スマホでは上から順に入力すれば日報になります。PDF作成ボタンは、この画面のまま印刷/PDF保存画面を開きます。</div>
+
+  <div class="grid">
+    <div class="label">工事件名</div><div class="field"><input data-key="projectName" placeholder="例：〇〇炉 耐火物補修工事"></div>
+    <div class="label">現場名</div><div class="field"><input data-key="siteName" placeholder="例：〇〇工場"></div>
+    <div class="label">客先名</div><div class="field"><input data-key="customer"></div>
+    <div class="label">元請/担当</div><div class="field"><input data-key="prime"></div>
+    <div class="label">作業日</div><div class="field"><input data-key="workDate" type="date"></div>
+    <div class="label">天候</div><div class="field"><select data-key="weather"><option></option><option>晴</option><option>曇</option><option>雨</option><option>雪</option><option>その他</option></select></div>
+    <div class="label">作業時間</div><div class="field"><input data-key="workTime" placeholder="例：8:00〜17:00"></div>
+    <div class="label">休憩/残業</div><div class="field"><input data-key="breakOvertime" placeholder="例：休憩90分／残業0h"></div>
+  </div>
+
+  <div class="shortcut">
+    <button onclick="setTime('8:00〜17:00','休憩90分／残業0h')">8:00〜17:00</button>
+    <button onclick="setTime('8:00〜16:30','休憩90分／残業0h')">8:00〜16:30</button>
+    <button onclick="setTime('8:00〜12:00','休憩0分／半日')">半日AM</button>
+    <button onclick="setTime('13:00〜17:00','休憩0分／半日')">半日PM</button>
+    <button onclick="setTime('20:00〜5:00','休憩60分／夜勤')">夜勤</button>
+  </div>
+
+  <div class="section">1. 本日の作業内容</div>
+  <div class="guide">👉 今日やった作業をそのまま書いてください。</div>
+  <div class="quick-row"><button onclick="addLine('workDetail','段取り、資材搬入')">段取り</button><button onclick="addLine('workDetail','型枠組立')">型枠</button><button onclick="addLine('workDetail','耐火キャスター流し込み施工')">流し込み</button><button onclick="addLine('workDetail','清掃、片付け')">片付け</button></div>
+  <textarea data-key="workDetail" oninput="updateCount('workDetail')" placeholder="例：
+・型枠組立
+・耐火キャスター流し込み施工
+・清掃、片付け"></textarea><div class="count" id="count_workDetail"></div>
+
+  <div class="section">2. 作業人員</div>
+  <div class="guide">👉 作業した人の名前をそのまま書いてください。</div>
+  <div class="quick-row"><button onclick="addLine('peopleFree','前田')">前田</button><button onclick="addLine('peopleFree','古川')">古川</button><button onclick="addLine('peopleFree','清水')">清水</button><button onclick="addLine('peopleFree','応援')">応援</button></div>
+  <textarea data-key="peopleFree" oninput="updateCount('peopleFree')" placeholder="例：
+前田
+古川
+山田（応援）"></textarea><div class="count" id="count_peopleFree"></div>
+
+  <div class="section">3. 使用材料・機材</div>
+  <div class="guide">👉 使用した材料・機材をそのまま書いてください。</div>
+  <div class="quick-row"><button onclick="addLine('materialFree','耐火キャスター ')">耐火キャスター</button><button onclick="addLine('materialFree','断熱キャスター ')">断熱キャスター</button><button onclick="addLine('materialFree','断熱材 ')">断熱材</button><button onclick="addLine('materialFree','アンカー金物 ')">アンカー金物</button></div>
+  <textarea data-key="materialFree" oninput="updateCount('materialFree')" placeholder="例：
+耐火キャスター 500kg
+断熱キャスター 200kg
+断熱材 20枚
+アンカー金物 30本"></textarea><div class="count" id="count_materialFree"></div>
+
+  <div class="section">4. 安全確認・品質確認</div>
+  <div class="guide">👉 確認した項目にチェックしてください。</div>
+  <div class="grid">
+    <div class="label">安全</div><div class="field"><label><input data-key="c1" type="checkbox" style="width:22px"> KY・TBM実施</label></div>
+    <div class="label">保護具</div><div class="field"><label><input data-key="c2" type="checkbox" style="width:22px"> 保護具着用確認</label></div>
+    <div class="label">火気</div><div class="field"><label><input data-key="c3" type="checkbox" style="width:22px"> 火気・溶接作業管理</label></div>
+    <div class="label">品質</div><div class="field"><label><input data-key="c4" type="checkbox" style="width:22px"> 寸法・施工範囲確認</label></div>
+    <div class="label">片付け</div><div class="field"><label><input data-key="c5" type="checkbox" style="width:22px"> 清掃・片付け確認</label></div>
+    <div class="label">共有</div><div class="field"><label><input data-key="c6" type="checkbox" style="width:22px"> 客先確認事項共有</label></div>
+  </div>
+
+  <div class="section">5. 問題点・変更点・申し送り</div>
+  <div class="guide">👉 明日への申し送り、変更点、客先確認事項を書いてください。</div>
+  <div class="quick-row"><button onclick="addLine('handover','特記事項なし')">特記事項なし</button><button onclick="addLine('handover','施工範囲に変更なし')">変更なし</button><button onclick="addLine('handover','明日も継続作業予定')">明日継続</button><button onclick="addLine('handover','客先確認事項あり')">確認あり</button></div>
+  <textarea data-key="handover" oninput="updateCount('handover')" placeholder="例：
+・施工範囲に変更なし
+・明日も継続作業予定
+・客先確認事項あり"></textarea><div class="count" id="count_handover"></div>
+
+  <div class="section">6. メモ・追記事項</div>
+  <textarea data-key="memo" oninput="updateCount('memo')" placeholder="自由記入欄"></textarea><div class="count" id="count_memo"></div>
+
+  <div class="footer-note">※ 入力内容は、このスマホ・このブラウザ内に自動保存されます。<br>※ PDF作成ボタンを押した後、スマホの印刷画面でPDF保存してください。</div>
+</main>
+
+<section id="printPage" class="print-page"></section>
+
+<script>
+const STORAGE_KEY='sfe_daily_reports_safe_pdf_v1';
+let reports=[],currentId=null,saveTimer=null;
+
+function today(){return new Date().toISOString().slice(0,10)}
+function emptyReport(){const id='r_'+Date.now();return{id,title:'新しい日報',updatedAt:new Date().toISOString(),data:{createdDate:today(),workDate:today(),weather:'晴'}}}
+function loadStorage(){try{reports=JSON.parse(localStorage.getItem(STORAGE_KEY))||[]}catch(e){reports=[]}if(!reports.length)reports.push(emptyReport());currentId=reports[0].id;renderList();loadReport(currentId);updateAllCounts()}
+function saveStorage(){localStorage.setItem(STORAGE_KEY,JSON.stringify(reports))}
+function getCurrentReport(){return reports.find(r=>r.id===currentId)}
+function collectData(){const d={};document.querySelectorAll('[data-key]').forEach(el=>{d[el.dataset.key]=el.type==='checkbox'?el.checked:el.value});return d}
+function applyData(d){document.querySelectorAll('[data-key]').forEach(el=>{const v=d[el.dataset.key];if(el.type==='checkbox')el.checked=!!v;else el.value=v||''});updateAllCounts()}
+function makeTitle(r){return (r.data.workDate||r.data.createdDate||'')+'｜'+(r.data.siteName||'現場未入力')+'｜'+(r.data.projectName||'工事件名未入力')}
+function autoSave(){const r=getCurrentReport();if(!r)return;r.data=collectData();r.updatedAt=new Date().toISOString();r.title=makeTitle(r);saveStorage();renderList(false);document.getElementById('saveStatus').textContent='自動保存済み：'+new Date().toLocaleTimeString('ja-JP')}
+function scheduleSave(){document.getElementById('saveStatus').textContent='自動保存中...';clearTimeout(saveTimer);saveTimer=setTimeout(autoSave,350)}
+function renderList(keep=true){const sel=document.getElementById('reportList');const selected=keep?sel.value:currentId;sel.innerHTML='';reports.sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));reports.forEach(r=>{const o=document.createElement('option');o.value=r.id;o.textContent=r.title||makeTitle(r);sel.appendChild(o)});sel.value=selected||currentId}
+function loadReport(id){currentId=id;const r=getCurrentReport();if(!r)return;applyData(r.data||{});document.getElementById('reportList').value=id}
+function loadSelectedReport(){autoSave();loadReport(document.getElementById('reportList').value)}
+function newReport(){autoSave();const r=emptyReport();reports.unshift(r);currentId=r.id;saveStorage();renderList(false);loadReport(currentId)}
+function duplicateReport(){autoSave();const b=getCurrentReport();const r={id:'r_'+Date.now(),title:'複製｜'+(b.title||'日報'),updatedAt:new Date().toISOString(),data:{...b.data,createdDate:today(),workDate:today()}};reports.unshift(r);currentId=r.id;saveStorage();renderList(false);loadReport(currentId)}
+function deleteReport(){if(reports.length<=1){alert('最後の1件は削除できません。');return}if(!confirm('この日報を削除しますか？'))return;reports=reports.filter(r=>r.id!==currentId);currentId=reports[0].id;saveStorage();renderList(false);loadReport(currentId)}
+function setTime(work,rest){document.querySelector('[data-key="workTime"]').value=work;document.querySelector('[data-key="breakOvertime"]').value=rest;scheduleSave()}
+function getValue(k){const el=document.querySelector('[data-key="'+k+'"]');return el?(el.type==='checkbox'?el.checked:el.value):''}
+function addLine(key,text){const el=document.querySelector('[data-key="'+key+'"]');if(!el)return;const current=el.value.trimEnd();const line='・'+text;el.value=current?current+'\n'+line:line;updateCount(key);el.focus();scheduleSave()}
+function updateCount(key){const el=document.querySelector('[data-key="'+key+'"]');const box=document.getElementById('count_'+key);if(!el||!box)return;const lines=el.value.trim()?el.value.trim().split(/\n/).length:0;box.textContent=lines+'行'}
+function updateAllCounts(){['workDetail','peopleFree','materialFree','handover','memo'].forEach(updateCount)}
+function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function nl2br(s){return esc(s)}
+function checksText(){const items=[['c1','KY・TBM実施'],['c2','保護具着用確認'],['c3','火気・溶接作業管理'],['c4','寸法・施工範囲確認'],['c5','清掃・片付け確認'],['c6','客先確認事項共有']];return items.map(([k,t])=>(getValue(k)?'☑':'□')+' '+t).join('\\n')}
+function buildPrintPage(){
+  autoSave();
+  document.getElementById('printPage').innerHTML=
+  '<div class="p-header"><div><h1>工事日報</h1><div>Daily Construction Report</div></div><div class="p-company"><div class="p-company-name">SFエンジ株式会社</div><div>築炉工事・耐火断熱工事・設備メンテナンス</div><div>作成日：'+esc(getValue('createdDate'))+'</div></div></div>'+
+  '<table class="p-table"><tr><th>工事件名</th><td>'+esc(getValue('projectName'))+'</td><th>現場名</th><td>'+esc(getValue('siteName'))+'</td></tr>'+
+  '<tr><th>客先名</th><td>'+esc(getValue('customer'))+'</td><th>元請/担当</th><td>'+esc(getValue('prime'))+'</td></tr>'+
+  '<tr><th>作業日</th><td>'+esc(getValue('workDate'))+'</td><th>天候</th><td>'+esc(getValue('weather'))+'</td></tr>'+
+  '<tr><th>作業時間</th><td>'+esc(getValue('workTime'))+'</td><th>休憩/残業</th><td>'+esc(getValue('breakOvertime'))+'</td></tr></table>'+
+  '<div class="p-section">1. 本日の作業内容</div><div class="p-box">'+nl2br(getValue('workDetail'))+'</div>'+
+  '<div class="p-section">2. 作業人員</div><div class="p-box">'+nl2br(getValue('peopleFree'))+'</div>'+
+  '<div class="p-section">3. 使用材料・機材</div><div class="p-box">'+nl2br(getValue('materialFree'))+'</div>'+
+  '<div class="p-section">4. 安全確認・品質確認</div><div class="p-box">'+checksText()+'</div>'+
+  '<div class="p-section">5. 問題点・変更点・申し送り</div><div class="p-box">'+nl2br(getValue('handover'))+'</div>'+
+  '<div class="p-section">6. メモ・追記事項</div><div class="p-box">'+nl2br(getValue('memo'))+'</div>';
+}
+function makePDF(){buildPrintPage();setTimeout(()=>window.print(),200)}
+async function copyShareText(){
+  autoSave();
+  const text=['【工事日報】','作業日：'+(getValue('workDate')||''),'工事件名：'+(getValue('projectName')||''),'現場名：'+(getValue('siteName')||''),'作業時間：'+(getValue('workTime')||'')+' '+(getValue('breakOvertime')||''),'','■作業内容',getValue('workDetail')||'','','■作業人員',getValue('peopleFree')||'','','■使用材料・機材',getValue('materialFree')||'','','■申し送り',getValue('handover')||''].join('\\n');
+  try{await navigator.clipboard.writeText(text);alert('共有文をコピーしました。')}catch(e){prompt('コピーしてください',text)}
+}
+document.addEventListener('input',scheduleSave);
+document.addEventListener('change',scheduleSave);
+window.addEventListener('beforeprint',buildPrintPage);
+loadStorage();
+</script>
+</body>
+</html>
